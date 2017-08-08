@@ -19,8 +19,8 @@
     </div>
     <script src="js/react.js"></script>
     <script src="js/react-dom.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.24/browser.min.js"></script>
-    <script type="text/babel">
+    <script>
+      var h = React.createElement
       var dotStyle = {
         position: 'absolute',
         background: '#61dafb',
@@ -59,8 +59,7 @@
         render() {
           var props = this.props;
           var s = props.size * 1.3;
-          var style = {
-            ...dotStyle,
+          var style = Object.assign({}, dotStyle, {
             width: s + 'px',
             height: s + 'px',
             left: (props.x) + 'px',
@@ -68,26 +67,22 @@
             borderRadius: (s / 2) + 'px',
             lineHeight: (s) + 'px',
             background: this.state.hover ? '#ff0' : dotStyle.background
-          };
-          return (
-            <div style={style} onMouseEnter={() => this.enter()} onMouseLeave={() => this.leave()}>
-              {this.state.hover ? '*' + props.text + '*' : props.text}
-            </div>
-          );
+          });
+          return h("div", {style: style, onMouseEnter: () => this.enter(), onMouseLeave:() => this.leave()},
+            this.state.hover ? '*' + props.text + '*' : props.text
+          )
         }
       }
 
       function SierpinskiTriangle({ x, y, s, children }) {
         if (s <= targetSize) {
-          return (
-            <Dot
-              x={x - (targetSize / 2)}
-              y={y - (targetSize / 2)}
-              size={targetSize}
-              text={children}
-            />
-          );
-          return r;
+          return h(Dot,{
+              x: x - (targetSize / 2),
+              y: y - (targetSize / 2),
+              size: targetSize,
+              text: children
+          })
+          // return r;
         }
         var newSize = s / 2;
         var slowDown = true;
@@ -100,18 +95,16 @@
 
         s /= 2;
 
-        return (
-          <div>
-            <SierpinskiTriangle x={x} y={y - (s / 2)} s={s}>
-              {children}
-            </SierpinskiTriangle>
-            <SierpinskiTriangle x={x - s} y={y + (s / 2)} s={s}>
-              {children}
-            </SierpinskiTriangle>
-            <SierpinskiTriangle x={x + s} y={y + (s / 2)} s={s}>
-              {children}
-            </SierpinskiTriangle>
-          </div>
+        return h("div", null,
+          h(SierpinskiTriangle, {x: x, y: y - (s / 2), s: s},
+            children
+          ),
+          h(SierpinskiTriangle, {x: x - s, y: y + (s / 2), s: s},
+            children
+          ),
+          h(SierpinskiTriangle, {x: x + s, y: y + (s / 2), s: s},
+            children
+          )
         );
       }
       SierpinskiTriangle.shouldComponentUpdate = function(oldProps, newProps) {
@@ -135,7 +128,9 @@
           this.intervalID = setInterval(this.tick, 1000);
         }
         tick() {
-          this.setState(state => ({ seconds: (state.seconds % 10) + 1 }))
+          // ReactDOMFiber.unstable_deferredUpdates(() =>
+            this.setState(state => ({ seconds: (state.seconds % 10) + 1 }))
+          // );
         }
         componentWillUnmount() {
           clearInterval(this.intervalID);
@@ -146,25 +141,44 @@
           const t = (elapsed / 1000) % 10;
           const scale = 1 + (t > 5 ? 10 - t : t) / 10;
           const transform = 'scaleX(' + (scale / 2.1) + ') scaleY(0.7) translateZ(0.1px)';
-          return (
-            <div style={{ ...containerStyle, transform }}>
-              <div>
-                <SierpinskiTriangle x={0} y={0} s={1000}>
-                  {this.state.seconds}
-                </SierpinskiTriangle>
-              </div>
-            </div>
-          );
+          return h("div", {style: Object.assign({}, containerStyle, { transform: transform })},
+            h("div", null,
+              h(SierpinskiTriangle, {x: 0, y: 0, s: 1000},
+                this.state.seconds
+              )
+            )
+          )
         }
       }
 
       var start = new Date().getTime();
+      class App extends React.Component{
+            constructor() {
+                super()
+                this.state = {
+                    elapsed: new Date().getTime() - start
+                }
+                this.update = this.update.bind(this)
+            }
+            update() {
+                this.setState({
+                    elapsed: new Date().getTime() - start
+                })
+                requestAnimationFrame(this.update)
+            }
+            componentDidMount() {
+                requestAnimationFrame(this.update)
+            }
+            render() {
+                return h(ExampleApplication, {elapsed: this.state.elapsed})
+            }
+        }
       function update() {
         ReactDOM.render(
-          <ExampleApplication elapsed={new Date().getTime() - start} />,
+          h(App),
           document.getElementById('container')
         );
-        requestAnimationFrame(update);
+        // requestAnimationFrame(update);
       }
       requestAnimationFrame(update);
     </script>
